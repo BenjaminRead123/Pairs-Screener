@@ -10,8 +10,26 @@ import warnings
 #check Pandas version - treating keys as positions.
 warnings.simplefilter(action="ignore", category=FutureWarning)
 pd.options.mode.chained_assignment = None
+yf.config.debug.hide_exceptions = False
 
-
+def isValidTicker(symbol):
+    symbol = symbol.strip().upper()
+    if symbol == "":
+        return False
+    try:
+        ticker = yf.Ticker(symbol)
+        history = ticker.history(
+            period="1mo",
+            interval="1d",
+            auto_adjust=False
+        )
+        return (
+            not history.empty
+            and "Close" in history.columns
+            and history["Close"].notna().any()
+        )
+    except Exception:
+        return False                 
 
 percentSplit =[0.6,0.7] #training data takes up first 60%, then val takes up from 60% to 80%, so it's only 20%
 
@@ -114,8 +132,52 @@ def main():
         ["XOM","CVX"],
         ["CBA.AX","NAB.AX"],
         ["BHP", "RIO"],
-        ["WOW.AX","COL.AX"]
     ]
+    print(f"Common Pairs are: {commonPairs}.")
+    while True:
+        addToCommonPairs = input("Would you like to add to the list of common pairs(y/n)?")
+        if addToCommonPairs != "y" and addToCommonPairs != "n":
+            print("Input (y/n).")
+        elif addToCommonPairs == "y":
+            while True:
+                comp1 = input("Company 1: ")
+                comp2 = input("Company 2: ")
+                if comp1 == comp2:
+                    print("Can't input the same company.")
+                    continue
+                comp1Validity = isValidTicker(comp1)
+                comp2Validity = isValidTicker(comp2)
+                comp1InPairs = False
+                comp2InPairs = False 
+                if comp1Validity and comp2Validity:
+                    for pair in commonPairs:
+                        for comp in pair:
+                            if comp == comp1:
+                                comp1InPairs = True
+                            if comp == comp2:
+                                comp2InPairs = True
+                        if comp1InPairs and comp2InPairs:
+                            break
+                        else:
+                            comp1InPairs = False
+                            comp2InPairs = False
+                    if comp1InPairs and comp2InPairs:
+                        print("Can't input the same pair of companies already in common pairs.")
+                    else:    
+                        commonPairs.append([comp1,comp2])
+                        break
+                else:
+                    if not comp1Validity and comp2Validity:
+                        print(f"{comp1} is not a valid ticker.")
+                    elif not comp2Validity and comp1Validity:
+                        print(f"{comp2} is not a valid ticker.")
+                    else:
+                        print(f"Both {comp1} and {comp2} are not valid tickers.") 
+        else:
+            break
+        break
+
+
     while True:
         times = ["10y", "5y", "2y", "1y", "6mo"]
         while True:
@@ -151,3 +213,5 @@ def main():
       
 
 main() 
+      
+
